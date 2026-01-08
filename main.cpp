@@ -80,8 +80,8 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 	hayabusa.radius = 15.0f;
 	hayabusa.color = 0x000088ff;
 	hayabusa.fillMode = kFillModeSolid;
-	hayabusa.velocity = Vector2::Normalize(Vector2(1.0f, 1.0f));
-	hayabusa.speed = 10.0f;
+	hayabusa.velocity = Vector2::Normalize(Vector2(1.0f, 1.0f)) * 10.0f;
+	hayabusa.speed = 100.0f;
 
 	// ウィンドウの×ボタンが押されるまでループ
 	while (Novice::ProcessMessage() == 0)
@@ -105,7 +105,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 		if (keys[DIK_D]) { earth.moveDir.x += 1.0f; }
 		earth.center += Vector2::Normalize(earth.moveDir) * earth.speed * kDeltaTime;*/
 
-
+		hayabusa.color = 0x000088ff;
 		Vector2 totalAcceleration{};
 		for (const Planet &planet : Planets)
 		{
@@ -117,37 +117,69 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 
 			if (currentLength <= hayabusa.radius + planet.gravityRange)
 			{
+				float dot = Vector2::Dot(hayabusa.velocity, toPlanet);
+				if (dot <= 0.0f) { continue; }
 				// 距離の割合
-				//float lengthRatio = planet.gravityRange / fmaxf(currentLength, minLength);
+				float lengthRatio = planet.gravityRange / fmaxf(currentLength, minLength);
 				// 計算に反映する割合
-				//float currentRatio = lengthRatio * lengthRatio;
+				float currentRatio = lengthRatio * lengthRatio;
 				// 引力計算
-				//float currentGravity = planet.gravity * currentRatio;
-				//Vector2 gravityDir = Vector2::Normalize(toPlanet);
-				//totalAcceleration += gravityDir * currentGravity;
+				float currentGravity = planet.gravity * currentRatio;
+				Vector2 gravityDir = Vector2::Normalize(toPlanet);
+				totalAcceleration += gravityDir * currentGravity;
 
-				// 現在の速度
-				float currentSpeed = hayabusa.velocity.Length();
-				currentSpeed = currentSpeed <= hayabusa.speed ? hayabusa.speed : currentSpeed;
+				//if (toPlanet.Length() <= planet.radius + hayabusa.radius)
+				//{
+				//	// 現在の速度
+				//	float currentSpeed = hayabusa.velocity.Length();
+				//	currentSpeed = currentSpeed <= hayabusa.speed ? hayabusa.speed : currentSpeed;
+				//	float cross = Vector2::Cross(hayabusa.velocity, toPlanet);
+				//	Vector2 tangent = Vector2::Normalize(Vector2(-toPlanet.y, toPlanet.x));
+				//	if (cross > 0.0f)
+				//	{
+				//		tangent = tangent;
+				//	}
+				//	else
+				//	{
+				//		tangent = tangent;
+				//	}
+				//	totalAcceleration += tangent * currentSpeed;
+				//	hayabusa.center = planet.center + Vector2::Normalize(-toPlanet) * (planet.radius + hayabusa.radius);
+				//}
 
-
-				float cross = Vector2::Cross(hayabusa.velocity, toPlanet);
-				Vector2 tangent = Vector2::Normalize(Vector2(-toPlanet.y, toPlanet.x));
-				Vector2 newDir{};
-				if (cross > 0.0f)
-				{
-					newDir = tangent;
-				}
-				else
-				{
-					newDir = -tangent;
-				}
-				totalAcceleration += newDir * currentSpeed;
+				hayabusa.color = RED;
 			}
 		}
 
 		hayabusa.velocity += totalAcceleration * kDeltaTime;
 		hayabusa.center += hayabusa.velocity * kDeltaTime;
+
+		float currentSpeed = hayabusa.velocity.Length();
+		currentSpeed--;
+		if (currentSpeed <= hayabusa.speed)
+		{
+			currentSpeed = hayabusa.speed;
+		}
+		hayabusa.velocity = Vector2::Normalize(hayabusa.velocity) * currentSpeed;
+
+		if (hayabusa.center.x + hayabusa.radius <= 0.0f)
+		{
+			hayabusa.center.x = kWinWidth;
+		}
+		if (hayabusa.center.x - hayabusa.radius >= kWinWidth)
+		{
+			hayabusa.center.x = 0.0f;
+		}
+
+		if (hayabusa.center.y + hayabusa.radius <= 0.0f)
+		{
+			hayabusa.center.y = kWinHeight;
+		}
+		if (hayabusa.center.y - hayabusa.radius >= kWinHeight)
+		{
+			hayabusa.center.y = 0.0f;
+		}
+
 
 		///
 		/// ↑更新処理ここまで
