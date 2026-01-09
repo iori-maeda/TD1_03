@@ -1,6 +1,7 @@
 #include <Novice.h>
 #include <numbers>
 #include <cmath>
+#include <vector>
 #include "Vector2.h"
 
 struct Circle
@@ -62,25 +63,31 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 		Sun
 	};
 
-	Planet Planets[2]{};
-	Planets[Earth].center = Vector2(200.0f, 360.0f);
-	Planets[Earth].radius = 40.0f;
-	Planets[Earth].color = 0x00a0faff;
-	Planets[Earth].speed = 1000.0f;
-	Planets[Earth].gravityRange = 1000.0f;
+	std::vector<Planet> planets;
 
-	Planets[Sun].center = Vector2(kWinWidth, kWinHeight) / 2.0f;
-	Planets[Sun].radius = 80.0f;
-	Planets[Sun].color = 0xffaa44ff;
-	Planets[Sun].speed = 0.0f;
-	Planets[Sun].gravityRange = 2000.0f;
+	Planet earth{};
+	earth.center = Vector2(200.0f, 360.0f);
+	earth.radius = 40.0f;
+	earth.color = 0x00a0faff;
+	earth.speed = 1000.0f;
+	earth.gravityRange = 500.0f;
+	//planets.push_back(earth);
+
+	Planet sun{};
+	sun.center = Vector2(kWinWidth, kWinHeight) / 2.0f;
+	sun.radius = 80.0f;
+	sun.color = 0xffaa44ff;
+	sun.speed = 0.0f;
+	sun.gravityRange = 500.0f;
+	sun.gravity = 10.0f;
+	planets.push_back(sun);
 
 	Satellite hayabusa{};
 	hayabusa.center = { 100.0f ,100.0f };
 	hayabusa.radius = 15.0f;
 	hayabusa.color = 0x000088ff;
 	hayabusa.fillMode = kFillModeSolid;
-	hayabusa.velocity = Vector2::Normalize(Vector2(1.0f, 1.0f)) * 10.0f;
+	hayabusa.velocity = Vector2::Normalize(Vector2(1.0f, 1.0f)) * 100.0f;
 	hayabusa.speed = 100.0f;
 
 	// ウィンドウの×ボタンが押されるまでループ
@@ -107,60 +114,32 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 
 		hayabusa.color = 0x000088ff;
 		Vector2 totalAcceleration{};
-		for (const Planet &planet : Planets)
+		for (const Planet &planet : planets)
 		{
 			// 相対ベクトル作成
 			Vector2 toPlanet = planet.center - hayabusa.center;
+			Vector2 toPlanetNorm = Vector2::Normalize(toPlanet);
 			// 相対距離の更新
 			float minLength = planet.radius + hayabusa.radius;
-			float currentLength = fmaxf(toPlanet.Length(), minLength);
+			float currentDist = fmaxf(toPlanet.Length(), minLength) - planet.radius;
 
-			if (currentLength <= hayabusa.radius + planet.gravityRange)
+			if (currentDist <= hayabusa.radius + planet.gravityRange + planet.radius)
 			{
-				float dot = Vector2::Dot(hayabusa.velocity, toPlanet);
-				if (dot <= 0.0f) { continue; }
-				// 距離の割合
-				float lengthRatio = planet.gravityRange / fmaxf(currentLength, minLength);
-				// 計算に反映する割合
-				float currentRatio = lengthRatio * lengthRatio;
-				// 引力計算
-				float currentGravity = planet.gravity * currentRatio;
-				Vector2 gravityDir = Vector2::Normalize(toPlanet);
-				totalAcceleration += gravityDir * currentGravity;
-
-				//if (toPlanet.Length() <= planet.radius + hayabusa.radius)
-				//{
-				//	// 現在の速度
-				//	float currentSpeed = hayabusa.velocity.Length();
-				//	currentSpeed = currentSpeed <= hayabusa.speed ? hayabusa.speed : currentSpeed;
-				//	float cross = Vector2::Cross(hayabusa.velocity, toPlanet);
-				//	Vector2 tangent = Vector2::Normalize(Vector2(-toPlanet.y, toPlanet.x));
-				//	if (cross > 0.0f)
-				//	{
-				//		tangent = tangent;
-				//	}
-				//	else
-				//	{
-				//		tangent = tangent;
-				//	}
-				//	totalAcceleration += tangent * currentSpeed;
-				//	hayabusa.center = planet.center + Vector2::Normalize(-toPlanet) * (planet.radius + hayabusa.radius);
-				//}
-
+				// 色の変更
 				hayabusa.color = RED;
+
+				float currentGravity = planet.gravity / (currentDist * currentDist);
+				Vector2 gravityAcceleration = toPlanetNorm * currentGravity;
+				/*if(Vector2::Dot(gravityAcceleration, toPlanet) >= 0.9f)
+				{
+					gravityAcceleration = planet.gravity * toPlanetNorm;
+				}*/
+
+				hayabusa.velocity += gravityAcceleration;// * kDeltaTime;
 			}
 		}
 
-		hayabusa.velocity += totalAcceleration * kDeltaTime;
 		hayabusa.center += hayabusa.velocity * kDeltaTime;
-
-		float currentSpeed = hayabusa.velocity.Length();
-		currentSpeed--;
-		if (currentSpeed <= hayabusa.speed)
-		{
-			currentSpeed = hayabusa.speed;
-		}
-		hayabusa.velocity = Vector2::Normalize(hayabusa.velocity) * currentSpeed;
 
 		if (hayabusa.center.x + hayabusa.radius <= 0.0f)
 		{
@@ -188,7 +167,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 		///
 		/// ↓描画処理ここから
 		///
-		for (const Planet &planet : Planets)
+		for (const Planet &planet : planets)
 		{
 			DrawCircle(planet);
 		}
