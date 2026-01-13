@@ -9,7 +9,7 @@ public:
 	float x = 0.0f, y = 0.0f;
 
 	float Length() const;
-	float SqetLength() const;
+	float LengthSquared() const;
 
 	static Vector2 Normalize(const Vector2& v);
 	static float Dot(const Vector2& v1, const Vector2& v2);
@@ -17,6 +17,7 @@ public:
 	static Vector2 Lerp(const Vector2& s, const Vector2& e, float t);
 
 	void operator+=(const Vector2& v);
+	void operator-=(const Vector2& v);
 	void operator*=(float n);
 
 	friend Vector2 operator+(const Vector2& v1,const Vector2& v2);

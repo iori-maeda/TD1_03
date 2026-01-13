@@ -8,7 +8,7 @@ float Vector2::Length() const
 	return sqrtf(x * x + y * y);
 }
 
-float Vector2::SqetLength() const
+float Vector2::LengthSquared() const
 {
 	return x * x + y * y;
 }
@@ -43,6 +43,12 @@ void Vector2::operator+=(const Vector2 &v)
 {
 	x += v.x;
 	y += v.y;
+}
+
+void Vector2::operator-=(const Vector2 &v)
+{
+	x -= v.x;
+	y -= v.y;
 }
 
 void Vector2::operator*=(float n)
