@@ -5,12 +5,6 @@
 #include <vector>
 #include "Vector2.h"
 
-using namespace std;
-const float kWinWidth = 1280.0f;
-const float kWinHeight = 720.0f;
-const float kDeltaTime = 1.0f / 60.0f;
-const Vector2 kOrigin{ 640.0f, 360.0f };
-
 struct CircleCollider
 {
 	Vector2 center{};
@@ -45,7 +39,7 @@ struct Angler : CircleCollider
 struct FishingHook : Angler
 {
 	bool isLineBroken = false;
-	float maxLineLength = kWinHeight / 2.0f;
+	float maxLineLength = 0.0f;
 };
 
 struct Fish :Angler
@@ -67,6 +61,23 @@ struct Scroll
 	Vector2 startMax{};
 	Vector2 value{};
 };
+
+
+#pragma region GrobalVariavle 
+const char kWindowTitle[] = "TD1_3回目";
+
+using namespace std;
+const float kWinWidth = 1280.0f;
+const float kWinHeight = 720.0f;
+const float kMaxStageWidth = kWinWidth /** 3.0f*/;
+const float kMaxStageHeight = kWinHeight /** 3.0f*/;
+const float kDeltaTime = 1.0f / 60.0f;
+const Vector2 kOrigin{ 640.0f, 360.0f };
+const BoxCollider kStage{
+	.min = Vector2(-kMaxStageWidth / 2.0, -kMaxStageHeight / 2.0f),
+	.max = Vector2(kMaxStageWidth / 2.0, kMaxStageHeight / 2.0f),
+};
+#pragma endregion
 
 Vector2 MoveScroll(const Scroll &s)
 {
@@ -176,8 +187,6 @@ void DrawLine(const Line &l, unsigned int color = 0xffffffff)
 	);
 }
 
-const char kWindowTitle[] = "TD1_3回目";
-
 // Windowsアプリでのエントリーポイント(main関数)
 int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 {
@@ -205,6 +214,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 	fishingHook.renderData.size = Vector2(fishingHook.radius, fishingHook.radius);
 	fishingHook.renderData.texHandle = kDefaultTex;
 	fishingHook.renderData.color = 0x008888ff;
+	fishingHook.maxLineLength = kWinHeight / 2.0f;
 
 	Line fishingLine{};
 
@@ -247,7 +257,10 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 		/// Hook Move
 		{
 			Vector2 toAngler = angler.center - fishingHook.center;
-			fishingHook.isLineBroken = toAngler.Length() >= fishingHook.maxLineLength;
+			if (toAngler.Length() >= fishingHook.maxLineLength)
+			{
+				fishingHook.isLineBroken = true;
+			};
 			if (!fishingHook.isLineBroken)
 			{
 				fishingHook.velocity += Vector2::Normalize(toAngler) * fishingHook.speed * kDeltaTime;
@@ -259,12 +272,35 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 				fishingHook.isLineBroken = false;
 			}
 			fishingHook.center += fishingHook.velocity;
+
+			if (fishingHook.center.y + fishingHook.radius > kStage.max.y)
+			{
+				fishingHook.center.y = kStage.max.y - fishingHook.radius;
+				fishingHook.velocity.y *= -1.0f;
+			}
+			if (fishingHook.center.y - fishingHook.radius < kStage.min.y)
+			{
+				fishingHook.center.y = kStage.min.y + fishingHook.radius;
+				fishingHook.velocity.y *= -1.0f;
+			}
+
+			if (fishingHook.center.x + fishingHook.radius > kStage.max.x)
+			{
+				fishingHook.center.x = kStage.max.x - fishingHook.radius;
+				fishingHook.velocity.x *= -1.0f;
+			}
+			if (fishingHook.center.x - fishingHook.radius < kStage.min.x)
+			{
+				fishingHook.center.x = kStage.min.x + fishingHook.radius;
+				fishingHook.velocity.x *= -1.0f;
+			}
+
 			fishingHook.velocity *= 0.999f;
 		}
 
 		// Fish Move
 		{
-			if(IsCollision(fish, fishingHook))
+			if (IsCollision(fish, fishingHook))
 			{
 				Sleep(100);
 			}
