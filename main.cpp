@@ -5,66 +5,175 @@
 #include <vector>
 #include "Vector2.h"
 
-struct Circle
+using namespace std;
+const float kWinWidth = 1280.0f;
+const float kWinHeight = 720.0f;
+const float kDeltaTime = 1.0f / 60.0f;
+const Vector2 kOrigin{ 640.0f, 360.0f };
+
+struct CircleCollider
 {
 	Vector2 center{};
 	float radius = 1.0f;
-	unsigned int color = WHITE;
-	FillMode fillMode = kFillModeSolid;
 };
 
-struct Planet : public Circle
+struct BoxCollider
 {
-	float speed = 1.0f;
-	Vector2 moveDir{};
-	float gravity = 0.98f;
-	float gravityRange = 100.0f;
+	Vector2 min{};
+	Vector2 max{};
 };
 
-struct Satellite : public Circle
+struct RenderData
 {
-	float speed = 1.0f;
+	Vector2 center{};
+	int texHandle = -1;
+	Vector2 size = { 1.0f ,1.0f };
+	float angle = 0.0f;
+
+	Vector2 texLeftTop{};
+	Vector2 texFrameSize{ 1.0f, 1.0f };
+	unsigned int color = 0xffffffff;
+};
+
+struct Angler : CircleCollider
+{
 	Vector2 velocity{};
+	RenderData renderData{};
+	float speed = 10.0f;
 };
 
-struct Segment
+struct FishingHook : Angler
+{
+	bool isLineBroken = false;
+	float maxLineLength = kWinHeight / 2.0f;
+};
+
+struct Fish :Angler
+{
+	bool isActive = false;
+	float lifeTime = 0.0f;
+};
+
+struct Line
 {
 	Vector2 start{};
 	Vector2 end{};
 };
 
-void DrawCircle(const Circle &c)
+struct Scroll
 {
-	Novice::DrawEllipse(
-		static_cast<int>(c.center.x),
-		static_cast<int>(c.center.y),
-		static_cast<int>(c.radius),
-		static_cast<int>(c.radius),
-		0.0f,
-		c.color,
-		c.fillMode
-	);
+	Vector2 *target = nullptr;
+	Vector2 startMin{};
+	Vector2 startMax{};
+	Vector2 value{};
+};
+
+Vector2 MoveScroll(const Scroll &s)
+{
+	Vector2 target = *s.target;
+	Vector2 diff{};
+	if (target.x <= s.startMin.x)
+	{
+		diff.x = target.x - s.startMin.x;
+	}
+	if (target.y <= s.startMin.y)
+	{
+		diff.y = target.y - s.startMin.y;
+	}
+	if (target.x >= s.startMax.x)
+	{
+		diff.x = target.x - s.startMax.x;
+	}
+	if (target.y >= s.startMax.y)
+	{
+		diff.y = target.y - s.startMax.y;
+	}
+	return diff;
 }
 
-bool isCollision(const Circle &c1, const Circle &c2)
+bool IsCollision(const CircleCollider &c1, const CircleCollider &c2)
 {
 	Vector2 diff = c1.center - c2.center;
-	return diff.LengthSquared() <= (c1.radius + c2.radius) * (c1.radius + c2.radius);
+	float sumR = c1.radius + c2.radius;
+
+	return diff.LengthSquared() <= sumR * sumR;
 }
 
-bool isCollision(const Circle &c, const Segment &s)
+bool IsCollision(const BoxCollider &b, const Vector2 &p)
 {
-	Vector2 toEnd = s.end - s.start;
-	Vector2 toCenter = c.center - s.start;
-	float toEndDiff = toEnd.LengthSquared();
+	bool isHitX = p.x >= b.min.x && p.x <= b.max.x;
+	bool isHitY = p.y >= b.min.y && p.y <= b.max.y;
+	return isHitX && isHitY;
+}
 
-	if (toEndDiff <= 0.0f) { return toCenter.LengthSquared() <= c.radius * c.radius; }
+void DrawSprite(const RenderData &s)
+{
+	Vector2 vertecies[4]{};
+	vertecies[0] = { s.center.x - s.size.x, s.center.y + s.size.y };
+	vertecies[1] = { s.center.x + s.size.x, s.center.y + s.size.y };
+	vertecies[2] = { s.center.x - s.size.x, s.center.y - s.size.y };
+	vertecies[3] = { s.center.x + s.size.x, s.center.y - s.size.y };
 
-	float t = Vector2::Dot(toCenter, toEnd) / toEnd.LengthSquared();
-	t = std::clamp(t, 0.0f, 1.0f);
-	Vector2 closestPoint = s.start + toEnd * t;
-	Vector2 diff = c.center - closestPoint;
-	return diff.LengthSquared() <= c.radius * c.radius;
+	for (Vector2 &v : vertecies)
+	{
+		v.x += kOrigin.x;
+		v.y -= kOrigin.y;
+		v.y *= -1.0f;
+	}
+
+	Novice::DrawQuad(
+		static_cast<int>(vertecies[0].x),
+		static_cast<int>(vertecies[0].y),
+		static_cast<int>(vertecies[1].x),
+		static_cast<int>(vertecies[1].y),
+		static_cast<int>(vertecies[2].x),
+		static_cast<int>(vertecies[2].y),
+		static_cast<int>(vertecies[3].x),
+		static_cast<int>(vertecies[3].y),
+		static_cast<int>(s.texLeftTop.x),
+		static_cast<int>(s.texLeftTop.y),
+		static_cast<int>(s.texFrameSize.x),
+		static_cast<int>(s.texFrameSize.y),
+		s.texHandle,
+		s.color
+	);
+
+#ifdef _DEBUG
+	Vector2 renderPos = s.center;
+	renderPos.x += kOrigin.x;
+	renderPos.y -= kOrigin.y;
+	renderPos.y *= -1.0f;
+	Novice::DrawEllipse(
+		static_cast<int>(renderPos.x),
+		static_cast<int>(renderPos.y),
+		static_cast<int>(s.size.x),
+		static_cast<int>(s.size.y),
+		s.angle,
+		(0xffffffff - s.color) | 0xff,
+		kFillModeWireFrame
+	);
+#endif 
+}
+
+void DrawLine(const Line &l, unsigned int color = 0xffffffff)
+{
+	Vector2 start = l.start;
+	start.x += kOrigin.x;
+	start.y -= kOrigin.y;
+	start.y *= -1.0f;
+
+	Vector2 end = l.end;
+	end.x += kOrigin.x;
+	end.y -= kOrigin.y;
+	end.y *= -1.0f;
+
+	Novice::DrawLine(
+		static_cast<int>(start.x),
+		static_cast<int>(start.y),
+		static_cast<int>(end.x),
+		static_cast<int>(end.y),
+		color
+	);
 }
 
 const char kWindowTitle[] = "TD1_3回目";
@@ -72,187 +181,154 @@ const char kWindowTitle[] = "TD1_3回目";
 // Windowsアプリでのエントリーポイント(main関数)
 int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 {
-	using namespace std;
-	const float kWinWidth = 1280.0f;
-	const float kWinHeight = 720.0f;
-	const float kDeltaTime = 1.0f / 60.0f;
-
 	// ライブラリの初期化
 	Novice::Initialize(kWindowTitle, static_cast<int>(kWinWidth), static_cast<int>(kWinHeight));
+
+	const unsigned int kDefaultTex = Novice::LoadTexture("white1x1.png");
 
 	// キー入力結果を受け取る箱
 	char keys[256] = { 0 };
 	char preKeys[256] = { 0 };
 
-	enum PlanetName
-	{
-		None = -1,
-		Earth = 0,
-		Sun
-	};
+	Angler angler{};
+	angler.radius = 16.0f;
+	angler.renderData.center = angler.center;
+	angler.renderData.size = Vector2(angler.radius, angler.radius);
+	angler.renderData.texHandle = kDefaultTex;
+	angler.speed = 200.0f;
 
-	std::vector<Planet> planets;
+	FishingHook fishingHook{};
 
-	Planet earth{};
-	earth.center = Vector2(200.0f, 360.0f);
-	earth.radius = 40.0f;
-	earth.color = 0x00a0faff;
-	earth.speed = 0.0f;
-	earth.gravityRange = 300.0f;
-	//planets.push_back(earth);
+	fishingHook.radius = 8.0f;
+	fishingHook.center = angler.center + Vector2(1.0f, 0.0f) * fishingHook.radius;
+	fishingHook.renderData.center = fishingHook.center;
+	fishingHook.renderData.size = Vector2(fishingHook.radius, fishingHook.radius);
+	fishingHook.renderData.texHandle = kDefaultTex;
+	fishingHook.renderData.color = 0x008888ff;
 
-	Planet sun{};
-	sun.center = Vector2(kWinWidth, kWinHeight) / 2.0f;
-	sun.radius = 80.0f;
-	sun.color = 0xffaa44ff;
-	sun.speed = 0.0f;
-	sun.gravityRange = 1000.0f;
-	sun.gravity = 3.0f;
-	planets.push_back(sun);
+	Line fishingLine{};
 
-	Satellite hayabusa{};
-	hayabusa.center = { 100.0f ,100.0f };
-	hayabusa.radius = 15.0f;
-	hayabusa.color = 0x000088ff;
-	hayabusa.fillMode = kFillModeSolid;
-	hayabusa.speed = 100.0f;
-	hayabusa.velocity = Vector2::Normalize(Vector2(1.0f, 1.0f)) * hayabusa.speed;
+	Fish fish{};
+	fish.center = Vector2(kWinWidth, kWinHeight);
+	fish.radius = 16.0f;
+	fish.renderData.center = fish.center;
+	fish.renderData.size = Vector2(fish.radius, fish.radius);
+	fish.renderData.texHandle = kDefaultTex;
+	fish.speed = 200.0f;
+	fish.renderData.color = 0x0066aaff;
 
-
-	// 相対ベクトル作成
-	Vector2 toPlanet{};
-	Vector2 toPlanetNorm{};
-	// 相対距離の更新
-	float minLength{};
-	float currentDist{};
-	float customDist{};
-
-	Vector2 tangent{};
-
-	Satellite target = hayabusa;
-	target.color = 0x000000ff;
-	target.fillMode = kFillModeWireFrame;
+	Scroll scroll{};
+	scroll.target = &angler.center;
+	scroll.startMin = Vector2(-30.0f, -30.0f);
+	scroll.startMax = Vector2(+30.0f, +30.0f);
 
 	// ウィンドウの×ボタンが押されるまでループ
 	while (Novice::ProcessMessage() == 0)
 	{
 		// フレームの開始
 		Novice::BeginFrame();
-
 		// キー入力を受け取る
 		memcpy(preKeys, keys, 256);
 		Novice::GetHitKeyStateAll(keys);
 
-		///
-		/// ↓更新処理ここから
-		///
-
-		hayabusa.color = 0x000088ff;
-		Vector2 totalAcceleration{};
-		for (const Planet &planet : planets)
+		/// Player Move
 		{
-			// 相対ベクトル作成
-			toPlanet = planet.center - hayabusa.center;
-			toPlanetNorm = Vector2::Normalize(toPlanet);
-			// 相対距離の更新
-			minLength = planet.radius + hayabusa.radius;
-			currentDist = toPlanet.Length();
-			customDist = powf(currentDist / 1500.0f, 2.0f);
+			Vector2 inputDir{};
+			if (keys[DIK_W]) { inputDir.y += 1.0f; }
+			if (keys[DIK_S]) { inputDir.y -= 1.0f; }
+			if (keys[DIK_A]) { inputDir.x -= 1.0f; }
+			if (keys[DIK_D]) { inputDir.x += 1.0f; }
 
-			if (currentDist <= hayabusa.radius + planet.gravityRange + planet.radius)
+			angler.velocity = Vector2::Normalize(inputDir) * angler.speed * kDeltaTime;
+			angler.center += angler.velocity;
+		}
+
+
+		/// Hook Move
+		{
+			Vector2 toAngler = angler.center - fishingHook.center;
+			fishingHook.isLineBroken = toAngler.Length() >= fishingHook.maxLineLength;
+			if (!fishingHook.isLineBroken)
 			{
-				// 色の変更
-				hayabusa.color = RED;
+				fishingHook.velocity += Vector2::Normalize(toAngler) * fishingHook.speed * kDeltaTime;
+			}
+			if (IsCollision(angler, fishingHook))
+			{
+				fishingHook.center = angler.center + Vector2::Normalize(-toAngler) * (angler.radius + fishingHook.radius);
+				fishingHook.velocity = {};
+				fishingHook.isLineBroken = false;
+			}
+			fishingHook.center += fishingHook.velocity;
+			fishingHook.velocity *= 0.999f;
+		}
 
-				float currentGravity = planet.gravity / customDist * kDeltaTime;
-				Vector2 gravityAcceleration = toPlanetNorm * currentGravity;
-
-				tangent = Vector2(-toPlanet.y, toPlanet.x);
-				if (Vector2::Cross(hayabusa.velocity, toPlanet) < 0.0f)
-				{
-					//tangent = Vector2(-tangent.y, tangent.x);
-				}
-				if (currentDist <= minLength)
-				{
-					hayabusa.center = planet.center + -toPlanetNorm * minLength;
-				}
-
-				Vector2 targetSurface = planet.center + Vector2::Normalize(tangent) * minLength;
-				Vector2 targetDir = targetSurface - hayabusa.center;
-
-				hayabusa.velocity = Vector2::Normalize(targetDir) * hayabusa.velocity.Length();
-				if(isCollision(planet, Segment(hayabusa.center, hayabusa.center + hayabusa.velocity)))
-				{
-					hayabusa.velocity += Vector2::Normalize(tangent) * hayabusa.speed;
-				}
-				hayabusa.velocity += gravityAcceleration;
-
-				target.center = planet.center + Vector2::Normalize(tangent) * minLength;
+		// Fish Move
+		{
+			if(IsCollision(fish, fishingHook))
+			{
+				Sleep(100);
 			}
 		}
 
-		hayabusa.center += hayabusa.velocity * kDeltaTime;
-
-		if (hayabusa.center.x + hayabusa.radius <= 0.0f)
+		/// Scroll Update
 		{
-			hayabusa.center.x = kWinWidth;
-		}
-		if (hayabusa.center.x - hayabusa.radius >= kWinWidth)
-		{
-			hayabusa.center.x = 0.0f;
-		}
-
-		if (hayabusa.center.y + hayabusa.radius <= 0.0f)
-		{
-			hayabusa.center.y = kWinHeight;
-		}
-		if (hayabusa.center.y - hayabusa.radius >= kWinHeight)
-		{
-			hayabusa.center.y = 0.0f;
+			scroll.value = MoveScroll(scroll);
+			angler.renderData.center = angler.center - scroll.value;
+			fishingHook.renderData.center = fishingHook.center - scroll.value;
+			fish.renderData.center = fish.center - scroll.value;
 		}
 
 
-		///
-		/// ↑更新処理ここまで
-		///
-
-		///
-		/// ↓描画処理ここから
-		///
-		for (const Planet &planet : planets)
+		/// Draw
 		{
-			DrawCircle(planet);
+			fishingLine.start = angler.center - scroll.value;
+			fishingLine.end = fishingHook.center - scroll.value;
+			{
+				Vector2 toAngler = angler.center - fishingHook.center;
+				float ratio = std::clamp(toAngler.Length() / fishingHook.maxLineLength, 0.0f, 1.0f);
+				float colorF = static_cast<float>(0x00ffff00) * ratio;
+				if (fishingHook.isLineBroken)
+				{
+					DrawLine(fishingLine, BLACK);
+				}
+				else
+				{
+					DrawLine(fishingLine, WHITE - static_cast<unsigned int>(colorF));
+				}
+			}
+			DrawSprite(angler.renderData);
+			DrawSprite(fishingHook.renderData);
+			DrawSprite(fish.renderData);
 		}
-		DrawCircle(hayabusa);
-		DrawCircle(target);
-		Vector2 drawDir = Vector2::Normalize(hayabusa.velocity);
-		Novice::DrawLine(
-			static_cast<int>(hayabusa.center.x),
-			static_cast<int>(hayabusa.center.y),
-			static_cast<int>(hayabusa.center.x + drawDir.x * 100.0f),
-			static_cast<int>(hayabusa.center.y + drawDir.y * 100.0f),
-			0x000000ff
-		);
-		Novice::DrawLine(
-			static_cast<int>(hayabusa.center.x),
-			static_cast<int>(hayabusa.center.y),
-			static_cast<int>(hayabusa.center.x + toPlanet.x),
-			static_cast<int>(hayabusa.center.y + toPlanet.y),
-			0x000000ff
-		);;
 
 #ifdef _DEBUG
-		Novice::ScreenPrintf(10, 10, "pos (x:%.2f, y:%.2f)", hayabusa.center.x, hayabusa.center.y);
-		Novice::ScreenPrintf(10, 30, "velo(x:%.2f, y:%.2f)", hayabusa.velocity.x, hayabusa.velocity.y);
-		Novice::ScreenPrintf(10, 50, "spd %.2f", hayabusa.velocity.Length());
+		Novice::ScreenPrintf(10, 10, "velocity(x:%.2f, y:%.2f) length(%.2f)", angler.velocity.x, angler.velocity.y, angler.velocity.Length());
+		Novice::ScreenPrintf(10, 30, "velocity(x:%.2f, y:%.2f) length(%.2f)", fishingHook.velocity.x, fishingHook.velocity.y, fishingHook.velocity.Length());
+		Novice::ScreenPrintf(10, 50, "scrollVa(x:%.2f, y:%.2f)", scroll.value);
+
+		DrawLine(Line(scroll.startMin, scroll.startMax), BLACK);
+
+		for (int i = -10; i <= 10; i++)
+		{
+			float width = kWinWidth / 10.0f * i;
+			Line line = { Vector2(width, 0.0f), Vector2(width, kWinHeight) };
+			line.start -= scroll.value;
+			line.end -= scroll.value;
+			DrawLine(line, 0x008800ff);
+		}
+
+		for (int i = -10; i <= 10; i++)
+		{
+			float height = kWinHeight / 10.0f * i;
+			Line line = { Vector2(0.0f,height), Vector2(kWinWidth, height) };
+			line.start -= scroll.value;
+			line.end -= scroll.value;
+			DrawLine(line, 0x880000ff);
+		}
 #endif
-		///
-		/// ↑描画処理ここまで
-		///
 
 		// フレームの終了
 		Novice::EndFrame();
-
 		// ESCキーが押されたらループを抜ける
 		if (preKeys[DIK_ESCAPE] == 0 && keys[DIK_ESCAPE] != 0)
 		{
