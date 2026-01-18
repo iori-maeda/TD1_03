@@ -54,9 +54,15 @@ struct Line
 	Vector2 end{};
 };
 
+struct FishingLine : Line
+{
+	float duravility = 100.0f;
+	unsigned int color = 0xffffffff;
+};
+
 struct Scroll
 {
-	Vector2 *target = nullptr;
+	Vector2* target = nullptr;
 	Vector2 startMin{};
 	Vector2 startMax{};
 	Vector2 value{};
@@ -79,7 +85,7 @@ const BoxCollider kStage{
 };
 #pragma endregion
 
-Vector2 MoveScroll(const Scroll &s)
+Vector2 MoveScroll(const Scroll& s)
 {
 	Vector2 target = *s.target;
 	Vector2 diff{};
@@ -102,7 +108,7 @@ Vector2 MoveScroll(const Scroll &s)
 	return diff;
 }
 
-bool IsCollision(const CircleCollider &c1, const CircleCollider &c2)
+bool IsCollision(const CircleCollider& c1, const CircleCollider& c2)
 {
 	Vector2 diff = c1.center - c2.center;
 	float sumR = c1.radius + c2.radius;
@@ -110,14 +116,14 @@ bool IsCollision(const CircleCollider &c1, const CircleCollider &c2)
 	return diff.LengthSquared() <= sumR * sumR;
 }
 
-bool IsCollision(const BoxCollider &b, const Vector2 &p)
+bool IsCollision(const BoxCollider& b, const Vector2& p)
 {
 	bool isHitX = p.x >= b.min.x && p.x <= b.max.x;
 	bool isHitY = p.y >= b.min.y && p.y <= b.max.y;
 	return isHitX && isHitY;
 }
 
-void DrawSprite(const RenderData &s)
+void DrawSprite(const RenderData& s)
 {
 	Vector2 vertecies[4]{};
 	vertecies[0] = { s.center.x - s.size.x, s.center.y + s.size.y };
@@ -125,7 +131,7 @@ void DrawSprite(const RenderData &s)
 	vertecies[2] = { s.center.x - s.size.x, s.center.y - s.size.y };
 	vertecies[3] = { s.center.x + s.size.x, s.center.y - s.size.y };
 
-	for (Vector2 &v : vertecies)
+	for (Vector2& v : vertecies)
 	{
 		v.x += kOrigin.x;
 		v.y -= kOrigin.y;
@@ -166,7 +172,7 @@ void DrawSprite(const RenderData &s)
 #endif 
 }
 
-void DrawLine(const Line &l, unsigned int color = 0xffffffff)
+void DrawLine(const Line& l, unsigned int color = 0xffffffff)
 {
 	Vector2 start = l.start;
 	start.x += kOrigin.x;
@@ -185,6 +191,23 @@ void DrawLine(const Line &l, unsigned int color = 0xffffffff)
 		static_cast<int>(end.y),
 		color
 	);
+}
+
+unsigned int LerpColor(unsigned int startColor, unsigned int endColor, float t)
+{
+	unsigned char startR = (startColor >> 24) & 0xff;
+	unsigned char startG = (startColor >> 16) & 0xff;
+	unsigned char startB = (startColor >> 8) & 0xff;
+	unsigned char startA = (startColor >> 0) & 0xff;
+	unsigned char endR = (endColor >> 24) & 0xff;
+	unsigned char endG = (endColor >> 16) & 0xff;
+	unsigned char endB = (endColor >> 8) & 0xff;
+	unsigned char endA = (endColor >> 0) & 0xff;
+	unsigned char lerpR = static_cast<unsigned char>(startR + (endR - startR) * t);
+	unsigned char lerpG = static_cast<unsigned char>(startG + (endG - startG) * t);
+	unsigned char lerpB = static_cast<unsigned char>(startB + (endB - startB) * t);
+	unsigned char lerpA = static_cast<unsigned char>(startA + (endA - startA) * t);
+	return (lerpR << 24) | (lerpG << 16) | (lerpB << 8) | (lerpA << 0);
 }
 
 // Windowsアプリでのエントリーポイント(main関数)
@@ -216,7 +239,8 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 	fishingHook.renderData.color = 0x008888ff;
 	fishingHook.maxLineLength = kWinHeight / 2.0f;
 
-	Line fishingLine{};
+	FishingLine fishingLine{};
+	fishingLine.color = WHITE;
 
 	Fish fish{};
 	fish.center = Vector2(kWinWidth, kWinHeight);
@@ -251,27 +275,44 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 
 			angler.velocity = Vector2::Normalize(inputDir) * angler.speed * kDeltaTime;
 			angler.center += angler.velocity;
-		}
 
+			angler.center.x = std::clamp(angler.center.x, kStage.min.x + angler.radius, kStage.max.x - angler.radius);
+			angler.center.y = std::clamp(angler.center.y, kStage.min.y + angler.radius, kStage.max.y - angler.radius);
+		}
 
 		/// Hook Move
 		{
 			Vector2 toAngler = angler.center - fishingHook.center;
-			if (toAngler.Length() >= fishingHook.maxLineLength)
-			{
-				fishingHook.isLineBroken = true;
-			};
+			Vector2 toAnglerNormal = Vector2::Normalize(toAngler);
+
+			// ラインが切れていないとき
 			if (!fishingHook.isLineBroken)
 			{
-				fishingHook.velocity += Vector2::Normalize(toAngler) * fishingHook.speed * kDeltaTime;
+				// push space key
+				if (keys[DIK_SPACE])
+				{
+					// if hook dir not pull dir
+					if (Vector2::Dot(Vector2::Normalize(fishingHook.velocity), -toAnglerNormal) < 0.0f)
+					{
+						fishingHook.velocity += toAnglerNormal * fishingHook.speed * 2.0f * kDeltaTime;
+					}
+				}
+				if (toAngler.Length() >= fishingHook.maxLineLength)
+				{
+					fishingHook.isLineBroken = true;
+				}
+				fishingHook.velocity += toAnglerNormal * fishingHook.speed * kDeltaTime;
 			}
 			if (IsCollision(angler, fishingHook))
 			{
-				fishingHook.center = angler.center + Vector2::Normalize(-toAngler) * (angler.radius + fishingHook.radius);
+				fishingHook.center = angler.center + -toAnglerNormal * (angler.radius + fishingHook.radius);
 				fishingHook.velocity = {};
 				fishingHook.isLineBroken = false;
 			}
 			fishingHook.center += fishingHook.velocity;
+
+			float ratio = std::clamp(toAngler.Length() / fishingHook.maxLineLength, 0.0f, 1.0f);
+			fishingLine.color = LerpColor(WHITE, RED, ratio);
 
 			if (fishingHook.center.y + fishingHook.radius > kStage.max.y)
 			{
@@ -312,6 +353,13 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 			angler.renderData.center = angler.center - scroll.value;
 			fishingHook.renderData.center = fishingHook.center - scroll.value;
 			fish.renderData.center = fish.center - scroll.value;
+
+			// scroll clamp map min
+			scroll.value.x = std::clamp(
+				scroll.value.x,
+				kStage.min.x,
+				kStage.max.x
+			);
 		}
 
 
@@ -320,16 +368,13 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 			fishingLine.start = angler.center - scroll.value;
 			fishingLine.end = fishingHook.center - scroll.value;
 			{
-				Vector2 toAngler = angler.center - fishingHook.center;
-				float ratio = std::clamp(toAngler.Length() / fishingHook.maxLineLength, 0.0f, 1.0f);
-				float colorF = static_cast<float>(0x00ffff00) * ratio;
 				if (fishingHook.isLineBroken)
 				{
 					DrawLine(fishingLine, BLACK);
 				}
 				else
 				{
-					DrawLine(fishingLine, WHITE - static_cast<unsigned int>(colorF));
+					DrawLine(fishingLine, fishingLine.color);
 				}
 			}
 			DrawSprite(angler.renderData);
@@ -344,10 +389,10 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 
 		DrawLine(Line(scroll.startMin, scroll.startMax), BLACK);
 
-		for (int i = -10; i <= 10; i++)
+		for (int i = -10; i < 10; i++)
 		{
 			float width = kWinWidth / 10.0f * i;
-			Line line = { Vector2(width, 0.0f), Vector2(width, kWinHeight) };
+			Line line = { Vector2(width, kStage.min.y), Vector2(width, kStage.max.y) };
 			line.start -= scroll.value;
 			line.end -= scroll.value;
 			DrawLine(line, 0x008800ff);
@@ -356,7 +401,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 		for (int i = -10; i <= 10; i++)
 		{
 			float height = kWinHeight / 10.0f * i;
-			Line line = { Vector2(0.0f,height), Vector2(kWinWidth, height) };
+			Line line = { Vector2(kStage.min.x,height), Vector2(kStage.max.x, height) };
 			line.start -= scroll.value;
 			line.end -= scroll.value;
 			DrawLine(line, 0x880000ff);
