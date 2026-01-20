@@ -4,30 +4,12 @@
 #include <algorithm>
 #include <vector>
 #include "Vector2.h"
+#include "ColliderCollection.h"
+#include "RendererUtility.h"
 
-struct CircleCollider
-{
-	Vector2 center{};
-	float radius = 1.0f;
-};
 
-struct BoxCollider
-{
-	Vector2 min{};
-	Vector2 max{};
-};
-
-struct RenderData
-{
-	Vector2 center{};
-	int texHandle = -1;
-	Vector2 size = { 1.0f ,1.0f };
-	float angle = 0.0f;
-
-	Vector2 texLeftTop{};
-	Vector2 texFrameSize{ 1.0f, 1.0f };
-	unsigned int color = 0xffffffff;
-};
+using namespace ColliderCollection;
+using namespace RendererUtility;
 
 struct Angler : CircleCollider
 {
@@ -48,11 +30,6 @@ struct Fish :Angler
 	float lifeTime = 0.0f;
 };
 
-struct Line
-{
-	Vector2 start{};
-	Vector2 end{};
-};
 
 struct FishingLine : Line
 {
@@ -60,138 +37,9 @@ struct FishingLine : Line
 	unsigned int color = 0xffffffff;
 };
 
-struct Scroll
-{
-	Vector2* target = nullptr;
-	Vector2 startMin{};
-	Vector2 startMax{};
-	Vector2 value{};
-};
-
-
-#pragma region GrobalVariavle 
 const char kWindowTitle[] = "TD1_3回目";
 
-using namespace std;
-const float kWinWidth = 1280.0f;
-const float kWinHeight = 720.0f;
-const float kMaxStageWidth = kWinWidth /** 3.0f*/;
-const float kMaxStageHeight = kWinHeight /** 3.0f*/;
-const float kDeltaTime = 1.0f / 60.0f;
-const Vector2 kOrigin{ 640.0f, 360.0f };
-const BoxCollider kStage{
-	.min = Vector2(-kMaxStageWidth / 2.0, -kMaxStageHeight / 2.0f),
-	.max = Vector2(kMaxStageWidth / 2.0, kMaxStageHeight / 2.0f),
-};
-#pragma endregion
 
-Vector2 MoveScroll(const Scroll& s)
-{
-	Vector2 target = *s.target;
-	Vector2 diff{};
-	if (target.x <= s.startMin.x)
-	{
-		diff.x = target.x - s.startMin.x;
-	}
-	if (target.y <= s.startMin.y)
-	{
-		diff.y = target.y - s.startMin.y;
-	}
-	if (target.x >= s.startMax.x)
-	{
-		diff.x = target.x - s.startMax.x;
-	}
-	if (target.y >= s.startMax.y)
-	{
-		diff.y = target.y - s.startMax.y;
-	}
-	return diff;
-}
-
-bool IsCollision(const CircleCollider& c1, const CircleCollider& c2)
-{
-	Vector2 diff = c1.center - c2.center;
-	float sumR = c1.radius + c2.radius;
-
-	return diff.LengthSquared() <= sumR * sumR;
-}
-
-bool IsCollision(const BoxCollider& b, const Vector2& p)
-{
-	bool isHitX = p.x >= b.min.x && p.x <= b.max.x;
-	bool isHitY = p.y >= b.min.y && p.y <= b.max.y;
-	return isHitX && isHitY;
-}
-
-void DrawSprite(const RenderData& s)
-{
-	Vector2 vertecies[4]{};
-	vertecies[0] = { s.center.x - s.size.x, s.center.y + s.size.y };
-	vertecies[1] = { s.center.x + s.size.x, s.center.y + s.size.y };
-	vertecies[2] = { s.center.x - s.size.x, s.center.y - s.size.y };
-	vertecies[3] = { s.center.x + s.size.x, s.center.y - s.size.y };
-
-	for (Vector2& v : vertecies)
-	{
-		v.x += kOrigin.x;
-		v.y -= kOrigin.y;
-		v.y *= -1.0f;
-	}
-
-	Novice::DrawQuad(
-		static_cast<int>(vertecies[0].x),
-		static_cast<int>(vertecies[0].y),
-		static_cast<int>(vertecies[1].x),
-		static_cast<int>(vertecies[1].y),
-		static_cast<int>(vertecies[2].x),
-		static_cast<int>(vertecies[2].y),
-		static_cast<int>(vertecies[3].x),
-		static_cast<int>(vertecies[3].y),
-		static_cast<int>(s.texLeftTop.x),
-		static_cast<int>(s.texLeftTop.y),
-		static_cast<int>(s.texFrameSize.x),
-		static_cast<int>(s.texFrameSize.y),
-		s.texHandle,
-		s.color
-	);
-
-#ifdef _DEBUG
-	Vector2 renderPos = s.center;
-	renderPos.x += kOrigin.x;
-	renderPos.y -= kOrigin.y;
-	renderPos.y *= -1.0f;
-	Novice::DrawEllipse(
-		static_cast<int>(renderPos.x),
-		static_cast<int>(renderPos.y),
-		static_cast<int>(s.size.x),
-		static_cast<int>(s.size.y),
-		s.angle,
-		(0xffffffff - s.color) | 0xff,
-		kFillModeWireFrame
-	);
-#endif 
-}
-
-void DrawLine(const Line& l, unsigned int color = 0xffffffff)
-{
-	Vector2 start = l.start;
-	start.x += kOrigin.x;
-	start.y -= kOrigin.y;
-	start.y *= -1.0f;
-
-	Vector2 end = l.end;
-	end.x += kOrigin.x;
-	end.y -= kOrigin.y;
-	end.y *= -1.0f;
-
-	Novice::DrawLine(
-		static_cast<int>(start.x),
-		static_cast<int>(start.y),
-		static_cast<int>(end.x),
-		static_cast<int>(end.y),
-		color
-	);
-}
 
 unsigned int LerpColor(unsigned int startColor, unsigned int endColor, float t)
 {
@@ -238,23 +86,23 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 	fishingHook.renderData.texHandle = kDefaultTex;
 	fishingHook.renderData.color = 0x008888ff;
 	fishingHook.maxLineLength = kWinHeight / 2.0f;
+	fishingHook.speed = 15.0f;
 
 	FishingLine fishingLine{};
 	fishingLine.color = WHITE;
 
 	Fish fish{};
-	fish.center = Vector2(kWinWidth, kWinHeight);
+	fish.center = Vector2(kWinWidth / 4.0f, kWinHeight / 4.0f);
 	fish.radius = 16.0f;
 	fish.renderData.center = fish.center;
 	fish.renderData.size = Vector2(fish.radius, fish.radius);
 	fish.renderData.texHandle = kDefaultTex;
-	fish.speed = 200.0f;
+	fish.speed = 50.0f;
 	fish.renderData.color = 0x0066aaff;
 
 	Scroll scroll{};
 	scroll.target = &angler.center;
-	scroll.startMin = Vector2(-30.0f, -30.0f);
-	scroll.startMax = Vector2(+30.0f, +30.0f);
+	scroll.startPoint = Vector2();
 
 	// ウィンドウの×ボタンが押されるまでループ
 	while (Novice::ProcessMessage() == 0)
@@ -341,6 +189,11 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 
 		// Fish Move
 		{
+			Vector2 toFish = fish.center - angler.center;
+			Vector2 tangentialDir = Vector2::Normalize(Vector2(-toFish.y, toFish.x));
+			fish.velocity = tangentialDir * fish.speed * kDeltaTime;
+			fish.center += fish.velocity;
+
 			if (IsCollision(fish, fishingHook))
 			{
 				Sleep(100);
@@ -386,8 +239,6 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 		Novice::ScreenPrintf(10, 10, "velocity(x:%.2f, y:%.2f) length(%.2f)", angler.velocity.x, angler.velocity.y, angler.velocity.Length());
 		Novice::ScreenPrintf(10, 30, "velocity(x:%.2f, y:%.2f) length(%.2f)", fishingHook.velocity.x, fishingHook.velocity.y, fishingHook.velocity.Length());
 		Novice::ScreenPrintf(10, 50, "scrollVa(x:%.2f, y:%.2f)", scroll.value);
-
-		DrawLine(Line(scroll.startMin, scroll.startMax), BLACK);
 
 		for (int i = -10; i < 10; i++)
 		{
