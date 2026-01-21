@@ -286,7 +286,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 				fish.velocity = tangentialDir * fish.speed * kDeltaTime;
 				fish.center += fish.velocity;
 
-				fish.renderData.angle = atan2f(fish.velocity.y, fish.velocity.x);
+				fish.renderData.angle = atan2f(fish.velocity.y, fish.velocity.x) + sinf(fish.center.x / 2.0f) / 5.0f;
 
 				if (!fishingHook.isLineBroken)
 				{
