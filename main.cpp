@@ -111,7 +111,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 	scroll.target = &angler.center;
 	scroll.startPoint = Vector2();
 
-	for (Fish &fish : fishies)
+	for (Fish& fish : fishies)
 	{
 		if (fish.isActive) { continue; }
 
@@ -207,20 +207,20 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 				if (toAngler.Length() >= fishingHook.maxLineLength)
 				{
 					fishingHook.isLineBroken = true;
-					fishingCount = 0;
-					
-				if (fishingCount > 0)
-				{
-					for (Fish &fish : fishies)
-					{
-						if (!fish.isActive) { continue; }
-						if (!fish.isFishing) { continue; }
 
-						fish.isActive = false;
-						fish.isFishing = false;
-						fishingCount = 0;
+					if (fishingCount > 0)
+					{
+						for (Fish& fish : fishies)
+						{
+							if (!fish.isActive) { continue; }
+							if (!fish.isFishing) { continue; }
+
+							fish.isActive = false;
+							fish.isFishing = false;
+							fishingCount = 0;
+						}
 					}
-				}
+					fishingCount = 0;
 				}
 				fishingHook.velocity += toAnglerNormal * fishingHook.speed * kDeltaTime;
 			}
@@ -232,7 +232,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 
 				if (fishingCount > 0)
 				{
-					for (Fish &fish : fishies)
+					for (Fish& fish : fishies)
 					{
 						if (!fish.isActive) { continue; }
 						if (!fish.isFishing) { continue; }
@@ -251,7 +251,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 			spawnFishTimer += kDeltaTime;
 			if (spawnFishTimer >= kSpawnFishTime)
 			{
-				for (Fish &fish : fishies)
+				for (Fish& fish : fishies)
 				{
 					if (fish.isActive) { continue; }
 
@@ -272,7 +272,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 
 		// Fish Move
 		{
-			for (Fish &fish : fishies)
+			for (Fish& fish : fishies)
 			{
 				if (!fish.isActive) { continue; }
 				if (fish.isFishing)
@@ -286,22 +286,23 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 				fish.velocity = tangentialDir * fish.speed * kDeltaTime;
 				fish.center += fish.velocity;
 
-				fish.renderData.angle = atan2f(fish.velocity.y,fish.velocity.x);
+				fish.renderData.angle = atan2f(fish.velocity.y, fish.velocity.x);
 
-				if (IsCollision(fish, fishingHook))
+				if (!fishingHook.isLineBroken)
 				{
-					float hookPower = fishingHook.velocity.Length();
-					if (hookPower < fish.lifePower)
+					if (IsCollision(fish, fishingHook))
 					{
-						fishingHook.velocity = -fishingHook.velocity;
-						fish.lifePower -= hookPower * 0.3f;
-						continue;
+						float hookPower = fishingHook.velocity.Length();
+						if (hookPower < fish.lifePower)
+						{
+							fish.lifePower -= hookPower * 0.3f;
+							continue;
+						}
+						Sleep(50);
+						fish.lifePower = 0.0f;
+						fish.isFishing = true;
+						fishingCount++;
 					}
-					Sleep(200);
-					fish.lifePower = 0.0f;
-					fish.isFishing = true;
-					fishingCount++;
-					fishingHook.velocity *= 0.5f;
 				}
 
 				fish.center.x = std::clamp(fish.center.x, kStage.min.x + fish.radius, kStage.max.x - fish.radius);
@@ -322,7 +323,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 
 			angler.renderData.center = angler.center - scroll.value;
 			fishingHook.renderData.center = fishingHook.center - scroll.value;
-			for (Fish &fish : fishies)
+			for (Fish& fish : fishies)
 			{
 				if (!fish.isActive) { continue; }
 				fish.renderData.center = fish.center - scroll.value;
@@ -346,7 +347,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 			}
 			DrawSprite(angler.renderData);
 			DrawSprite(fishingHook.renderData);
-			for (Fish &fish : fishies)
+			for (Fish& fish : fishies)
 			{
 				if (!fish.isActive) { continue; }
 				DrawSprite(fish.renderData);
