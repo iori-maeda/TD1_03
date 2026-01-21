@@ -35,8 +35,8 @@ namespace RendererUtility
 	using namespace std;
 	const float kWinWidth = 1280.0f;
 	const float kWinHeight = 720.0f;
-	const float kMaxStageWidth = kWinWidth * 3.0f;
-	const float kMaxStageHeight = kWinHeight * 3.0f;
+	const float kMaxStageWidth = kWinWidth;// * 3.0f;
+	const float kMaxStageHeight = kWinHeight;// * 3.0f;
 	const float kDeltaTime = 1.0f / 60.0f;
 	const Vector2 kOrigin{ 640.0f, 360.0f };
 	const ColliderCollection::BoxCollider kStage{
