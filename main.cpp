@@ -12,20 +12,20 @@
 using namespace ColliderCollection;
 using namespace RendererUtility;
 
-struct Angler : CircleCollider
+struct GameObject : CircleCollider
 {
 	Vector2 velocity{};
 	RenderData renderData{};
 	float speed = 10.0f;
 };
 
-struct FishingHook : Angler
+struct FishingHook : GameObject
 {
 	bool isLineBroken = false;
 	float maxLineLength = 0.0f;
 };
 
-struct Fish :Angler
+struct Fish :GameObject
 {
 	bool isActive = false;
 	bool isFishing = false;
@@ -74,7 +74,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 	char keys[256] = { 0 };
 	char preKeys[256] = { 0 };
 
-	Angler angler{};
+	GameObject angler{};
 	angler.radius = 16.0f;
 	angler.renderData.center = angler.center;
 	angler.renderData.size = Vector2(angler.radius, angler.radius);
