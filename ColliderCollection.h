@@ -19,6 +19,5 @@ namespace ColliderCollection
 	bool IsCollision(const CircleCollider& c1, const CircleCollider& c2);
 
 	bool IsCollision(const BoxCollider& b, const Vector2& p);
-
 };
 

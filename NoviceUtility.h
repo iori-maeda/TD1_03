@@ -1,8 +1,8 @@
-#pragma once
-#include "Vector2.h"
+﻿#pragma once
+#include "GameObject.h"
 #include "ColliderCollection.h"
 
-namespace RendererUtility
+namespace NoviceUtility
 {
 	struct RenderData
 	{
@@ -16,10 +16,9 @@ namespace RendererUtility
 		unsigned int color = 0xffffffff;
 	};
 
-
 	struct Scroll
 	{
-		Vector2 *target = nullptr;
+		Vector2 target{};
 		Vector2 value{};
 		Vector2 startPoint{};
 	};
@@ -46,10 +45,28 @@ namespace RendererUtility
 	const Vector2 kDrawMargin = Vector2(10.0f, 10.0f);
 #pragma endregion
 
+	/// <summary>
+	/// 
+	/// </summary>
+	/// <param name="obj">描画オブジェクトの情報</param>
+	/// <param name="graphHandle">画像ハンドル</param>
+	/// <param name="color">色</param>
+	/// <param name="scale">倍率</param>
+	/// <param name="uvPosition">画像切り取り開始左上頂点</param>
+	/// <param name="drawArea">画像切り取り範囲</param>
+	void DrawSprite(
+		const GameObject &obj,
+		int graphHandle,
+		const Vector2 &uvPosition = Vector2(),
+		const Vector2 &drawArea = Vector2(1.0f, 1.0f),
+		const Vector2 &scale = Vector2(1.0f, 1.0f)
+	);
+
+	void DrawDebugObjectInformation(const Vector2 &position, const GameObject &info);
+
 	Vector2 MoveScroll(const Scroll &s);
 
 	void DrawSprite(const RenderData &s);
 
 	void DrawLine(const Line &l, unsigned int color = 0xffffffff);
 };
-

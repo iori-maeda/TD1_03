@@ -162,10 +162,13 @@ xcopy C:\KamataEngine\DirectXGame\Resources "$(OutDirFullPath)NoviceResources" /
     <ClCompile Include="C:\KamataEngine\Adapter\Novice.cpp" />
     <ClCompile Include="ColliderCollection.cpp" />
     <ClCompile Include="Fish.cpp" />
+    <ClCompile Include="FishingHook.cpp" />
+    <ClCompile Include="FishingLine.cpp" />
     <ClCompile Include="GameObject.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="NoviceUtility.cpp" />
+    <ClCompile Include="Player.cpp" />
     <ClCompile Include="Random.cpp" />
-    <ClCompile Include="RendererUtility.cpp" />
     <ClCompile Include="Vector2.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -198,9 +201,12 @@ xcopy C:\KamataEngine\DirectXGame\Resources "$(OutDirFullPath)NoviceResources" /
     <ClInclude Include="C:\KamataEngine\Adapter\Novice.h" />
     <ClInclude Include="ColliderCollection.h" />
     <ClInclude Include="Fish.h" />
+    <ClInclude Include="FishingHook.h" />
+    <ClInclude Include="FishingLine.h" />
     <ClInclude Include="GameObject.h" />
+    <ClInclude Include="NoviceUtility.h" />
+    <ClInclude Include="Player.h" />
     <ClInclude Include="Random.h" />
-    <ClInclude Include="RendererUtility.h" />
     <ClInclude Include="Vector2.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
