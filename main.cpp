@@ -185,6 +185,15 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 				fishingHook->AddVelocity(fishingLine->GetToAnglerNorm() * fishingHook->GetSpeed() * kDeltaTime);
 			}
 		}
+		else
+		{
+			for (auto& fish : fishies)
+			{
+				if(!fish->IsActive()){continue;}
+				if(!fish->IsFishing()){continue;}
+				fish->Escape();
+			}
+		}
 
 		fishingHook->Update();
 

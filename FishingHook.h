@@ -41,7 +41,7 @@ public:
 private:
 
 	GameObject *mTarget = nullptr;
-	const float mSpeed = 15.0f;
+	float mSpeed = 15.0f;
 
 	Vector2 mMoveDir{};
 	Vector2 mVelocity{};

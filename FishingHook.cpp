@@ -20,6 +20,7 @@ void FishingHook::Update()
 {
 	mCenterPosition += mVelocity;
 	mVelocity *= 0.999f;
+	CheckStageReflect();
 
 	mCollider.center = mCenterPosition;
 }
@@ -37,23 +38,23 @@ void FishingHook::CheckStageReflect()
 	if (mCenterPosition.y + mCollider.radius > kStage.max.y)
 	{
 		mCenterPosition.y = kStage.max.y - mCollider.radius;
-		mVelocity.y *= -1.0f;
+		mVelocity.y *= -0.5f;
 	}
 	if (mCenterPosition.y - mCollider.radius < kStage.min.y)
 	{
 		mCenterPosition.y = kStage.min.y + mCollider.radius;
-		mVelocity.y *= -1.0f;
+		mVelocity.y *= -0.5f;
 	}
 
 	if (mCenterPosition.x + mCollider.radius > kStage.max.x)
 	{
 		mCenterPosition.x = kStage.max.x - mCollider.radius;
-		mVelocity.x *= -1.0f;
+		mVelocity.x *= -0.5f;
 	}
 	if (mCenterPosition.x - mCollider.radius < kStage.min.x)
 	{
 		mCenterPosition.x = kStage.min.x + mCollider.radius;
-		mVelocity.x *= -1.0f;
+		mVelocity.x *= -0.5f;
 	}
 }
 
