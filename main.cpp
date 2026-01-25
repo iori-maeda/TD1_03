@@ -140,12 +140,13 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 	fishConfig.speed = 50.0f;
 	fishConfig.sizeHalf = Vector2(fishConfig.collider.radius, fishConfig.collider.radius);
 	fishConfig.target = player.get();
+	fishConfig.tailWaveSpeed = 20.0f;
 
 	RenderData fishRenderData{};
 	fishRenderData.size = fishConfig.sizeHalf;
 	fishRenderData.texHandle = kFishTex;
 	fishRenderData.texFrameSize = Vector2(32.0f, 32.0f);
-	for (auto &fish : fishies)
+	for (auto& fish : fishies)
 	{
 		if (fish == nullptr) { fish = make_unique<Fish>(); }
 
@@ -189,35 +190,36 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 		{
 			for (auto& fish : fishies)
 			{
-				if(!fish->IsActive()){continue;}
-				if(!fish->IsFishing()){continue;}
+				if (!fish->IsActive()) { continue; }
+				if (!fish->IsFishing()) { continue; }
 				fish->Escape();
 			}
 		}
 
 		fishingHook->Update();
 
-		if(IsCollision(player->GetCollider(), fishingHook->GetCollider()))
+		if (IsCollision(player->GetCollider(), fishingHook->GetCollider()))
 		{
 			fishingHook->OnCollision(*player.get());
+			fishingLine->LineConnected();
 		}
 
-		
+
 		// Fish Spawn
 		{
 			spawnFishTimer += kDeltaTime;
 			if (spawnFishTimer >= kSpawnFishTime)
 			{
-				for (auto &fish : fishies)
+				for (auto& fish : fishies)
 				{
 					if (fish->IsActive()) { continue; }
 
-					float spawnRange = Random::GetRandom(100.0f, kStage.max.x);
+					float spawnRange = Random::GetRandom(100.0f, kStage.max.x + 100.0f);
 					float spawnTheta = Random::GetRandom(0.0f, std::numbers::pi_v<float>);
 
-					fishConfig.centerPosition = Vector2(cosf(spawnTheta), sinf(spawnTheta)) * spawnRange;
+					fishConfig.centerPosition = Vector2(cosf(spawnTheta), sinf(spawnTheta)) * (spawnRange + Vector2(kMaxStageWidth / 2.0f, kMaxStageHeight / 2.0f).Length());
 					//fishConfig.lifePower = Random::GetRandom(5.0f, 10.0f);
-					fishConfig.speed = Random::GetRandom(5.0f, 8.0f);
+					fishConfig.speed = Random::GetRandom(50.0f, 180.0f);
 
 					fish->Spawn(fishConfig);
 					break;
@@ -229,7 +231,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 
 		// Fish Move
 		{
-			for (auto &fish : fishies)
+			for (auto& fish : fishies)
 			{
 				if (fish == nullptr) { continue; }
 				if (!fish->IsActive()) { continue; }
@@ -240,40 +242,14 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 				}*/
 				fish->Update();
 
-				if(IsCollision(fishingHook->GetCollider(), fish->GetCollider()))
+				if (IsCollision(fishingHook->GetCollider(), fish->GetCollider()))
 				{
 					fish->OnCollision(*fishingHook.get());
-					if(fish->IsFishing())
+					if (fish->IsFishing())
 					{
 						fish->SetPosition(fishingHook->GetPosition());
 					}
 				}
-				//Vector2 toFish = fish.center - player->GetPosition();
-				//Vector2 tangentialDir = Vector2::Normalize(Vector2(-toFish.y, toFish.x));
-				//fish.velocity = tangentialDir * fish.speed * kDeltaTime;
-				//fish.center += fish.velocity;
-
-				//fish.renderData.angle = atan2f(fish.velocity.y, fish.velocity.x) + sinf((fish.center.x - fish.center.y) / 2.0f) / 5.0f;
-
-				//if (!fishingHook.isLineBroken)
-				//{
-				//	if (IsCollision(fish, fishingHook))
-				//	{
-				//		float hookPower = fishingHook.velocity.Length();
-				//		if (hookPower < fish.lifePower)
-				//		{
-				//			fish.lifePower -= hookPower * 0.3f;
-				//			continue;
-				//		}
-				//		//Sleep(50);
-				//		fish.lifePower = 0.0f;
-				//		fish.mIsFishing = true;
-				//		fishingCount++;
-				//	}
-				//}
-
-				//fish.center.x = std::clamp(fish.center.x, kStage.min.x + fish.radius, kStage.max.x - fish.radius);
-				//fish.center.y = std::clamp(fish.center.y, kStage.min.y + fish.radius, kStage.max.y - fish.radius);
 			}
 		}
 
@@ -316,11 +292,12 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 			DrawLine(fishingLine->GetLine(), fishingLine->GetColor());
 			DrawSprite(playerRenderData);
 			DrawSprite(fishingHookRenderData);
-			for (auto &fish : fishies)
+			for (auto& fish : fishies)
 			{
 				if (!fish->IsActive()) { continue; }
 				fishRenderData.center = fish->GetPosition() - scroll.value;
-				fishRenderData.angle = atan2f(fish->GetMoveDir().y, fish->GetMoveDir().x) + sinf((fish->GetPosition().x - fish->GetPosition().y) / 2.0f) / 5.0f;
+				fishRenderData.angle = fish->GetMoveAngle() + fish->TailWaveAngle();
+				fishRenderData.color = LerpColor(0x880000ff, fishConfig.color, fish->GetLifePower() / fishConfig.lifePower);
 				DrawSprite(fishRenderData);
 			}
 		}

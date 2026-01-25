@@ -2,6 +2,7 @@
 #include "Vector2.h"
 #include "GameObject.h"
 #include "ColliderCollection.h"
+#include <cmath>
 
 struct FishConfig : public GameObjectConfig
 {
@@ -9,6 +10,7 @@ struct FishConfig : public GameObjectConfig
 	ColliderCollection::CircleCollider collider{};
 	GameObject* target = nullptr;
 	float tailWaveSpeed = 10.0f;
+	float lifePower = 100.0f;
 };
 
 class Fish : public GameObject
@@ -26,7 +28,8 @@ public:
 		mCollider(config.collider),
 		mIsFishing(false),
 		mTailWaveSpeed(config.tailWaveSpeed),
-		mTailWaveValue(0.0f)
+		mTailWaveValue(0.0f),
+		mLifePower(config.lifePower)
 	{
 	};
 
@@ -41,12 +44,18 @@ private:
 	void GoArea();
 	void StateUpdate();
 
+	void TailWave();
+	void Move();
+
 public:
 
 	bool IsFishing() const { return mIsFishing; }
 	Vector2 GetMoveDir() const { return mMoveDir; }
 	Vector2 GetVelocity() const { return mVelocity; }
 	ColliderCollection::CircleCollider GetCollider() const { return mCollider; }
+	float TailWaveAngle();
+	float GetMoveAngle() const { return std::atan2f(mMoveDir.y, mMoveDir.x); }
+	float GetLifePower() const { return mLifePower; }
 
 	void SetPosition(const Vector2& position) { mCenterPosition = position; }
 
@@ -68,6 +77,7 @@ private:
 	Vector2 mVelocity{};
 	float mTailWaveValue = 0.0f;
 	float mTailWaveSpeed = 10.0f;
+	float mLifePower = 100.0f;
 
 	bool mIsFishing = false;
 	ColliderCollection::CircleCollider mCollider{};

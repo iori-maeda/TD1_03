@@ -1,23 +1,32 @@
 ﻿#include "Fish.h"
 #include "NoviceUtility.h"
 #include "Random.h"
+#include "FishingHook.h"
 
 using namespace NoviceUtility;
 
 void Fish::OnCollision(const GameObject& obj)
 {
+	if (mState == State::Escape) { return; }
 	if (!obj.CompareTag(ObjectTag::FishingHook)) { return; }
 
-	//const FishingHook& hook = static_cast<const FishingHook&>(obj);
-	//float hookPower = hook.GetVelocity().Length();
-	mIsFishing = true;
+	const FishingHook& hook = static_cast<const FishingHook&>(obj);
+	float hookPower = hook.GetVelocity().Length();
+	mLifePower -= hookPower;
+	if (mLifePower <= 0.0f)
+	{
+		//mState = State::Escape;
+		mLifePower = 0.0f;
+		mIsFishing = true;
+		return;
+	}
 }
 
 void Fish::Update()
 {
-	Excursion();
+	//Excursion();
 
-	GameObject::ClampGameArea();
+	StateUpdate();
 
 	mCollider.center = mCenterPosition;
 }
@@ -39,16 +48,18 @@ void Fish::Excursion()
 	Vector2 toMe = mCenterPosition - mTraget->GetPosition();
 	mMoveDir = Vector2::Normalize(Vector2(-toMe.y, toMe.x));
 	mVelocity = mMoveDir * mSpeed * kDeltaTime;
+	Move();
 
-	mCenterPosition += mVelocity;
+	GameObject::ClampGameArea();
 }
 
 void Fish::GoArea()
 {
 	Vector2 toStart = mStartPosition - mCenterPosition;
+	mMoveDir = Vector2::Normalize(toStart);
+	mVelocity = mMoveDir * mSpeed * 2.0f * kDeltaTime;
 
-	mCenterPosition += Vector2::Normalize(toStart) * mSpeed * 2.0f * kDeltaTime;
-
+	Move();
 	if (toStart.Length() < 5.0f)
 	{
 		mState = Fish::State::Excursion;
@@ -58,7 +69,17 @@ void Fish::GoArea()
 
 void Fish::Escape()
 {
-	mIsActive = false;
+	mState = Fish::State::Escape;
+	mIsFishing = false;
+	Vector2 toAway = Vector2::Normalize(mCenterPosition - mTraget->GetPosition());
+	mMoveDir = toAway;
+	mVelocity = mMoveDir * mSpeed * 3.0f * kDeltaTime;
+	Move();
+	if (mCenterPosition.Length() > kStage.max.x + 100.0f)
+	{
+		mIsActive = false;
+		return;
+	}
 }
 
 void Fish::StateUpdate()
@@ -67,11 +88,33 @@ void Fish::StateUpdate()
 	{
 	case Fish::State::Spawn:
 		break;
+	case Fish::State::GoArea:
+		GoArea();
+		break;
 	case Fish::State::Excursion:
+		Excursion();
 		break;
 	case Fish::State::Escape:
+		Escape();
 		break;
 	default:
 		break;
 	}
+}
+
+void Fish::TailWave()
+{
+	mTailWaveValue += mTailWaveSpeed * kDeltaTime;
+	//mTailWaveValue = std::clamp(mTailWaveValue, 0.0f, 360.0f);
+}
+
+void Fish::Move()
+{
+	mCenterPosition += mVelocity;
+	TailWave();
+}
+
+float Fish::TailWaveAngle()
+{
+	return sinf(mTailWaveValue) / 5.0f;
 }
