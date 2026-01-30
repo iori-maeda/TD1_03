@@ -16,6 +16,7 @@ struct GameObjectConfig
 	bool isActive = true;
 	Vector2 centerPosition{};
 	Vector2 sizeHalf{ 5.0f, 5.0f };
+	Vector2 scale{ 1.0f, 1.0f };
 	unsigned int color = 0xffffffff;
 };
 
@@ -28,11 +29,18 @@ public:
 		mIsActive(true),
 		mCenterPosition{},
 		mSizeHalf{ 32.0f, 32.0f },
+		mScale{ 1.0f ,1.0f },
 		mColor(0xffffffff)
 	{};
 
 	GameObject(ObjectTag tag, const Vector2 &position, const Vector2 &sizeHalf, unsigned int color = 0xffffffff, bool isActive = true)
-		:mTag(tag), mIsActive(isActive), mCenterPosition(position), mSizeHalf(sizeHalf), mColor(color)
+		:
+		mTag(tag),
+		mIsActive(isActive),
+		mCenterPosition(position),
+		mSizeHalf(sizeHalf),
+		mScale{ 1.0f ,1.0f },
+		mColor(color)
 	{};
 
 	GameObject(const GameObjectConfig &config)
@@ -40,6 +48,7 @@ public:
 		mIsActive(config.isActive),
 		mCenterPosition(config.centerPosition),
 		mSizeHalf(config.sizeHalf),
+		mScale(config.scale),
 		mColor(config.color)
 	{};
 
@@ -55,6 +64,7 @@ public:
 	bool IsActive() const { return mIsActive; }
 	Vector2 GetPosition() const { return mCenterPosition; }
 	Vector2 GetSizeHalf() const { return mSizeHalf; }
+	Vector2 GetScale() const { return mScale; }
 	unsigned int GetColor() const { return mColor; }
 
 	void SetPosition(const Vector2 &position) { mCenterPosition = position; }
@@ -64,6 +74,7 @@ protected:
 	bool mIsActive = true;
 	Vector2 mCenterPosition{};
 	Vector2 mSizeHalf{};
+	Vector2 mScale{ 1.0f ,1.0f };
 
 	unsigned int mColor = 0xffffffff;
 };

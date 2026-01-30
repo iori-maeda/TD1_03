@@ -58,8 +58,7 @@ namespace NoviceUtility
 		const GameObject &obj,
 		int graphHandle,
 		const Vector2 &uvPosition = Vector2(),
-		const Vector2 &drawArea = Vector2(1.0f, 1.0f),
-		const Vector2 &scale = Vector2(1.0f, 1.0f)
+		const Vector2 &drawArea = Vector2(1.0f, 1.0f)
 	);
 
 	void DrawDebugObjectInformation(const Vector2 &position, const GameObject &info);

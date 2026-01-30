@@ -8,11 +8,10 @@ namespace NoviceUtility
 		const GameObject &obj,
 		int graphHandle,
 		const Vector2 &uvPosition,
-		const Vector2 &drawArea,
-		const Vector2 &scale
+		const Vector2 &drawArea
 	)
 	{
-		Vector2 drawSize = { obj.GetSizeHalf().x * scale.x, obj.GetSizeHalf().y * scale.y };
+		Vector2 drawSize = { obj.GetSizeHalf().x * obj.GetScale().x, obj.GetSizeHalf().y * obj.GetScale().y };
 		Novice::DrawQuad(
 			static_cast<int>(obj.GetPosition().x - drawSize.x),
 			static_cast<int>(obj.GetPosition().y - drawSize.y),

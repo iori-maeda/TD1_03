@@ -17,37 +17,15 @@
 using namespace ColliderCollection;
 using namespace NoviceUtility;
 
-struct Angler : CircleCollider
-{
-	Vector2 velocity{};
-	RenderData renderData{};
-	float speed = 10.0f;
-};
-//
-//struct FishingHook : Angler
-//{
-//	bool isLineBroken = false;
-//	float maxLineLength = 0.0f;
-//	float duravility = 0.0f;
-//};
-
-//struct Fish :Angler
-//{
-//	bool isActive = false;
-//	bool mIsFishing = false;
-//	float lifeTime = 0.0f;
-//	float lifePower = 100.0f;
-//};
-
-
-//struct FishingLine : Line
-//{
-//	unsigned int color = 0xffffffff;
-//};
-
 const char kWindowTitle[] = "TD1_3回目";
 
-
+Vector2 RandomShake(const Vector2 &amptitude)
+{
+	return{
+		Random::GetRandom(0.0f, amptitude.x),
+		Random::GetRandom(0.0f, amptitude.y)
+	};
+};
 
 unsigned int LerpColor(unsigned int startColor, unsigned int endColor, float t)
 {
@@ -112,14 +90,6 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 
 	unique_ptr<FishingLine> fishingLine = make_unique<FishingLine>(fishingHook.get(), player.get(), kWinWidth / 2.0f, WHITE);
 
-	//fishingHook.maxLineLength = kWinWidth / 2.0f;
-	//fishingHook.duravility = 100.0f;
-
-	/*FishingLine fishingLine{};
-	fishingLine.color = WHITE;
-	Vector2 toAngler{};
-	Vector2 toAnglerNormal{};*/
-
 	int fishingCount = 0;
 	int totalFishingCount = 0;
 
@@ -135,6 +105,8 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 	std::vector <unique_ptr<Fish>> fishies{};
 	fishies.resize(kMaxFishies);
 
+
+	const Vector2 kFishBaseSizeHalf = Vector2(16.0f, 16.0f);
 	FishConfig fishConfig{};
 	fishConfig.collider.radius = 16.0f;
 	fishConfig.speed = 50.0f;
@@ -146,7 +118,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 	fishRenderData.size = fishConfig.sizeHalf;
 	fishRenderData.texHandle = kFishTex;
 	fishRenderData.texFrameSize = Vector2(32.0f, 32.0f);
-	for (auto& fish : fishies)
+	for (auto &fish : fishies)
 	{
 		if (fish == nullptr) { fish = make_unique<Fish>(); }
 
@@ -160,6 +132,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 		fish->Spawn(fishConfig);
 	}
 
+	//Vector2 amplitude{};
 	// ウィンドウの×ボタンが押されるまでループ
 	while (Novice::ProcessMessage() == 0)
 	{
@@ -188,7 +161,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 		}
 		else
 		{
-			for (auto& fish : fishies)
+			for (auto &fish : fishies)
 			{
 				if (!fish->IsActive()) { continue; }
 				if (!fish->IsFishing()) { continue; }
@@ -210,7 +183,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 			spawnFishTimer += kDeltaTime;
 			if (spawnFishTimer >= kSpawnFishTime)
 			{
-				for (auto& fish : fishies)
+				for (auto &fish : fishies)
 				{
 					if (fish->IsActive()) { continue; }
 
@@ -231,15 +204,11 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 
 		// Fish Move
 		{
-			for (auto& fish : fishies)
+			for (auto &fish : fishies)
 			{
 				if (fish == nullptr) { continue; }
 				if (!fish->IsActive()) { continue; }
-				/*if (fish.mIsFishing)
-				{
-					fish.center = fishingHook.GetPosition() - fishingHook.radius * Vector2::Normalize(-fish.velocity);
-					continue;
-				}*/
+
 				fish->Update();
 
 				if (IsCollision(fishingHook->GetCollider(), fish->GetCollider()))
@@ -274,28 +243,31 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 			}*/
 		}
 
+		//{
+		//	if (amplitude.Length() > 1.0f)
+		//	{
+		//		amplitude *= 0.9f;
+		//		playerRenderData.center += RandomShake(amplitude);
+		//	}
+		//}
 
 		/// Draw
 		{
-			/*fishingLine.start = player->GetPosition() - scroll.value;
-			fishingLine.end = fishingHook.GetPosition() - scroll.value;
-			{
-				if (fishingHook.isLineBroken)
-				{
-					DrawLine(fishingLine, BLACK);
-				}
-				else
-				{
-					DrawLine(fishingLine, fishingLine.color);
-				}
-			}*/
 			DrawLine(fishingLine->GetLine(), fishingLine->GetColor());
 			DrawSprite(playerRenderData);
 			DrawSprite(fishingHookRenderData);
-			for (auto& fish : fishies)
+			for (auto &fish : fishies)
 			{
 				if (!fish->IsActive()) { continue; }
 				fishRenderData.center = fish->GetPosition() - scroll.value;
+				/*if (amplitude.Length() > 0.0f)
+				{
+					fishRenderData.center += RandomShake(amplitude);
+				}*/
+				fishRenderData.size = Vector2(
+					kFishBaseSizeHalf.x * fish->GetScale().x,
+					kFishBaseSizeHalf.y * fish->GetScale().y
+				);
 				fishRenderData.angle = fish->GetMoveAngle() + fish->TailWaveAngle();
 				fishRenderData.color = LerpColor(0x880000ff, fishConfig.color, fish->GetLifePower() / fishConfig.lifePower);
 				DrawSprite(fishRenderData);

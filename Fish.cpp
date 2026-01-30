@@ -2,15 +2,17 @@
 #include "NoviceUtility.h"
 #include "Random.h"
 #include "FishingHook.h"
+#include <Windows.h>
 
 using namespace NoviceUtility;
 
-void Fish::OnCollision(const GameObject& obj)
+void Fish::OnCollision(const GameObject &obj)
 {
+	if (mIsFishing) { return; }
 	if (mState == State::Escape) { return; }
 	if (!obj.CompareTag(ObjectTag::FishingHook)) { return; }
 
-	const FishingHook& hook = static_cast<const FishingHook&>(obj);
+	const FishingHook &hook = static_cast<const FishingHook &>(obj);
 	float hookPower = hook.GetVelocity().Length();
 	mLifePower -= hookPower;
 	if (mLifePower <= 0.0f)
@@ -18,6 +20,8 @@ void Fish::OnCollision(const GameObject& obj)
 		//mState = State::Escape;
 		mLifePower = 0.0f;
 		mIsFishing = true;
+		mScale *= 2.0f;
+		Sleep(100);
 		return;
 	}
 }
@@ -29,9 +33,11 @@ void Fish::Update()
 	StateUpdate();
 
 	mCollider.center = mCenterPosition;
+
+	mScale = Vector2::Lerp(mScale, Vector2(1.0f, 1.0f), 0.1f);
 }
 
-void Fish::Spawn(const FishConfig& config)
+void Fish::Spawn(const FishConfig &config)
 {
 	// uniqur_ptrがメンバに追加されたら変更が必要
 	// 定数もダメ
