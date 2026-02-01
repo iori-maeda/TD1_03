@@ -124,3 +124,8 @@ float Fish::TailWaveAngle()
 {
 	return sinf(mTailWaveValue) / 5.0f;
 }
+
+void Fish::Lifted()
+{
+
+}

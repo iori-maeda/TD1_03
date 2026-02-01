@@ -29,6 +29,8 @@ public:
 	void MoveUp();
 	void MoveDown();
 
+	void UpdateCollider();
+
 public:
 	ColliderCollection::CircleCollider GetCollider() const { return mCollider; }
 

@@ -51,12 +51,26 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 	Novice::Initialize(kWindowTitle, static_cast<int>(kWinWidth), static_cast<int>(kWinHeight));
 
 	const unsigned int kDefaultTex = Novice::LoadTexture("white1x1.png");
+	const unsigned int kTitleTex = Novice::LoadTexture("./Resources/Images/Title.png");
 	const unsigned int kFishTex = Novice::LoadTexture("./Resources/Images/Fish.png");
+
 	Random::Initialize();
 
 	// キー入力結果を受け取る箱
 	char keys[256] = { 0 };
 	char preKeys[256] = { 0 };
+
+	RenderData titleRenderData{};
+	titleRenderData.texHandle = kTitleTex;
+	titleRenderData.center = Vector2(0.0f, 200.0f);
+	titleRenderData.texFrameSize = Vector2(590.0f, 128.0f);
+	titleRenderData.size = titleRenderData.texFrameSize / 2.0f;
+
+	Vector2 titlePosition = titleRenderData.center;
+	const float kTitleMovingSpeed = 10.0f;
+	const float kTitleVisibleTime = 3.0f;
+	float titleVisibleTimer = 0.0f;
+	bool isSceneChange = false;
 
 	PlayerConfig playerConfig{};
 	playerConfig.collider.radius = 16.0f;
@@ -132,6 +146,14 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 		fish->Spawn(fishConfig);
 	}
 
+	enum class SceneNames
+	{
+		Title,
+		InGame,
+		EndGame,
+		Format
+	} scene = SceneNames::Format;
+
 	//Vector2 amplitude{};
 	// ウィンドウの×ボタンが押されるまでループ
 	while (Novice::ProcessMessage() == 0)
@@ -142,114 +164,204 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 		memcpy(preKeys, keys, 256);
 		Novice::GetHitKeyStateAll(keys);
 
-		/// Player Move
-		Vector2 inputDir{};
-		if (keys[DIK_W]) { player->MoveUp(); }
-		if (keys[DIK_S]) { player->MoveDown(); }
-		if (keys[DIK_A]) { player->MoveLeft(); }
-		if (keys[DIK_D]) { player->MoveRight(); }
-		player->Update();
-
-		if (!fishingLine->CheckLineBroken())
+		switch (scene)
 		{
-			fishingHook->MoveUpdate();
-
-			if (keys[DIK_SPACE])
+		case SceneNames::Title:
+			if (keys[DIK_SPACE] && !preKeys[DIK_SPACE])
 			{
-				fishingHook->AddVelocity(fishingLine->GetToAnglerNorm() * fishingHook->GetSpeed() * kDeltaTime);
+				isSceneChange = true;
+				titleVisibleTimer = 0.0f;
 			}
-		}
-		else
-		{
-			for (auto &fish : fishies)
+
+			if (isSceneChange)
 			{
-				if (!fish->IsActive()) { continue; }
-				if (!fish->IsFishing()) { continue; }
-				fish->Escape();
+				if ((titleRenderData.color & 0xff) != 0x00)
+				{
+					titlePosition.y += kTitleMovingSpeed * kDeltaTime;
+					titlePosition.x = cosf(titlePosition.y) * kTitleMovingSpeed;
+
+					titleVisibleTimer += kDeltaTime;
+					titleRenderData.color = LerpColor(WHITE, 0xffffff00, titleVisibleTimer / kTitleVisibleTime);
+
+					titleRenderData.center = titlePosition;
+				}
+				else
+				{
+					scene = SceneNames::InGame;
+					isSceneChange = false;
+				}
 			}
-		}
+			else
+			{
+				titleVisibleTimer += kDeltaTime;
+				titlePosition.y += sinf(titleVisibleTimer) * kTitleMovingSpeed * kDeltaTime;
+				titleRenderData.center = titlePosition;
+			}
 
-		fishingHook->Update();
-
-		if (IsCollision(player->GetCollider(), fishingHook->GetCollider()))
+			[[fallthrough]];
+		case SceneNames::InGame:
 		{
-			fishingHook->OnCollision(*player.get());
-			fishingLine->LineConnected();
-		}
 
+			/// Player Move
+			Vector2 inputDir{};
+			if (keys[DIK_W]) { player->MoveUp(); }
+			if (keys[DIK_S]) { player->MoveDown(); }
+			if (keys[DIK_A]) { player->MoveLeft(); }
+			if (keys[DIK_D]) { player->MoveRight(); }
+			player->Update();
 
-		// Fish Spawn
-		{
-			spawnFishTimer += kDeltaTime;
-			if (spawnFishTimer >= kSpawnFishTime)
+			if (!fishingLine->CheckLineBroken())
+			{
+				fishingHook->MoveUpdate();
+
+				if (keys[DIK_SPACE])
+				{
+					fishingHook->AddVelocity(fishingLine->GetToAnglerNorm() * fishingHook->GetSpeed() * kDeltaTime);
+				}
+			}
+			else
 			{
 				for (auto &fish : fishies)
 				{
-					if (fish->IsActive()) { continue; }
-
-					float spawnRange = Random::GetRandom(100.0f, kStage.max.x + 100.0f);
-					float spawnTheta = Random::GetRandom(0.0f, std::numbers::pi_v<float>);
-
-					fishConfig.centerPosition = Vector2(cosf(spawnTheta), sinf(spawnTheta)) * (spawnRange + Vector2(kMaxStageWidth / 2.0f, kMaxStageHeight / 2.0f).Length());
-					//fishConfig.lifePower = Random::GetRandom(5.0f, 10.0f);
-					fishConfig.speed = Random::GetRandom(50.0f, 180.0f);
-
-					fish->Spawn(fishConfig);
-					break;
+					if (!fish->IsActive()) { continue; }
+					if (!fish->IsFishing()) { continue; }
+					fish->Escape();
 				}
-
-				spawnFishTimer = 0.0f;
 			}
-		}
 
-		// Fish Move
-		{
-			for (auto &fish : fishies)
+			fishingHook->Update();
+
+			if (IsCollision(player->GetCollider(), fishingHook->GetCollider()))
 			{
-				if (fish == nullptr) { continue; }
-				if (!fish->IsActive()) { continue; }
+				fishingHook->OnCollision(*player.get());
+				fishingLine->LineConnected();
+			}
 
-				fish->Update();
 
-				if (IsCollision(fishingHook->GetCollider(), fish->GetCollider()))
+			// Fish Spawn
+			{
+				spawnFishTimer += kDeltaTime;
+				if (spawnFishTimer >= kSpawnFishTime)
 				{
-					fish->OnCollision(*fishingHook.get());
+					for (auto &fish : fishies)
+					{
+						if (fish->IsActive()) { continue; }
+
+						float spawnRange = Random::GetRandom(100.0f, kStage.max.x + 100.0f);
+						float spawnTheta = Random::GetRandom(0.0f, std::numbers::pi_v<float>);
+
+						fishConfig.centerPosition = Vector2(cosf(spawnTheta), sinf(spawnTheta)) * (spawnRange + Vector2(kMaxStageWidth / 2.0f, kMaxStageHeight / 2.0f).Length());
+						fishConfig.speed = Random::GetRandom(50.0f, 180.0f);
+
+						fish->Spawn(fishConfig);
+						break;
+					}
+
+					spawnFishTimer = 0.0f;
+				}
+			}
+
+			// Fish Move
+			{
+				for (auto &fish : fishies)
+				{
+					if (fish == nullptr) { continue; }
+					if (!fish->IsActive()) { continue; }
+
+					fish->Update();
+
+					if (IsCollision(fishingHook->GetCollider(), fish->GetCollider()))
+					{
+						fish->OnCollision(*fishingHook.get());
+						if (fish->IsFishing())
+						{
+							fish->SetPosition(fishingHook->GetPosition());
+							fishingCount++;
+							if (scene == SceneNames::Title)
+							{
+								scene == SceneNames::InGame;
+							}
+						}
+					}
+
 					if (fish->IsFishing())
 					{
-						fish->SetPosition(fishingHook->GetPosition());
+						if (IsCollision(player->GetCollider(), fish->GetCollider()))
+						{
+							totalFishingCount += fishingCount;
+						}
 					}
 				}
 			}
-		}
 
-		/// Scroll Update
-		{
-			scroll.target = player->GetPosition();
-			scroll.value = MoveScroll(scroll);
-
-			// scroll clamp map min
-			scroll.value.x = std::clamp(
-				scroll.value.x,
-				kStage.min.x,
-				kStage.max.x
-			);
-
-			playerRenderData.center = player->GetPosition() - scroll.value;
-			fishingHookRenderData.center = fishingHook->GetPosition() - scroll.value;
-			/*for (auto &fish : fishies)
+			/// Scroll Update
 			{
-				if (!fish->IsActive()) { continue; }
-				fish.renderData.center = fish.center - scroll.value;
-			}*/
-		}
+				scroll.target = player->GetPosition();
+				scroll.value = MoveScroll(scroll);
 
-		//{
-		//	if (amplitude.Length() > 1.0f)
-		//	{
-		//		amplitude *= 0.9f;
-		//		playerRenderData.center += RandomShake(amplitude);
-		//	}
-		//}
+				// scroll clamp map min
+				scroll.value.x = std::clamp(
+					scroll.value.x,
+					kStage.min.x,
+					kStage.max.x
+				);
+
+				playerRenderData.center = player->GetPosition() - scroll.value;
+				fishingHookRenderData.center = fishingHook->GetPosition() - scroll.value;
+			}
+
+			if (fishingLine->CheckLineBroken())
+			{
+				scene = SceneNames::EndGame;
+			}
+		}
+		break;
+		case SceneNames::EndGame:
+		{
+			if (keys[DIK_SPACE] && !preKeys[DIK_SPACE])
+			{
+				scene = SceneNames::Format;
+			}
+		}
+		break;
+		case SceneNames::Format:
+		{
+			player->SetPosition(Vector2(0.0f, 0.0f));
+			playerRenderData.center = player->GetPosition();
+			player->UpdateCollider();
+
+			fishingHook->SetPosition(player->GetPosition() + Vector2(1.0f, 0.0f) * fishingHookConfig.collider.radius);
+
+			fishingLine->LineConnected();
+
+			fishRenderData.size = fishConfig.sizeHalf;
+			fishRenderData.texHandle = kFishTex;
+			fishRenderData.texFrameSize = Vector2(32.0f, 32.0f);
+			for (auto &fish : fishies)
+			{
+				if (fish == nullptr) { fish = make_unique<Fish>(); }
+
+				float spawnRange = Random::GetRandom(100.0f, kStage.max.x);
+				float spawnTheta = Random::GetRandom(0.0f, std::numbers::pi_v<float>);
+
+				fishConfig.centerPosition = Vector2(cosf(spawnTheta), sinf(spawnTheta)) * spawnRange;
+				//fishConfig.lifePower = Random::GetRandom(5.0f, 10.0f);
+				fishConfig.speed = Random::GetRandom(50.0f, 80.0f);
+
+				fish->Spawn(fishConfig);
+			}
+
+			spawnFishTimer = 0.0f;
+
+			fishingCount = 0;
+			totalFishingCount = 0;
+
+			scene = SceneNames::Title;
+		}
+		break;
+		default:
+			break;
+		}
 
 		/// Draw
 		{
@@ -260,10 +372,6 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 			{
 				if (!fish->IsActive()) { continue; }
 				fishRenderData.center = fish->GetPosition() - scroll.value;
-				/*if (amplitude.Length() > 0.0f)
-				{
-					fishRenderData.center += RandomShake(amplitude);
-				}*/
 				fishRenderData.size = Vector2(
 					kFishBaseSizeHalf.x * fish->GetScale().x,
 					kFishBaseSizeHalf.y * fish->GetScale().y
@@ -272,6 +380,8 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 				fishRenderData.color = LerpColor(0x880000ff, fishConfig.color, fish->GetLifePower() / fishConfig.lifePower);
 				DrawSprite(fishRenderData);
 			}
+
+			DrawSprite(titleRenderData);
 		}
 
 #ifdef _DEBUG

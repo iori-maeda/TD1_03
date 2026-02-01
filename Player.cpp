@@ -22,8 +22,6 @@ void Player::Update()
 	mMoveDir = {};
 
 	GameObject::ClampGameArea();
-
-	mCollider.center = mCenterPosition;
 }
 
 void Player::MoveLeft()
@@ -44,4 +42,9 @@ void Player::MoveUp()
 void Player::MoveDown()
 {
 	mMoveDir.y -= 1.0f;
+}
+
+void Player::UpdateCollider()
+{
+	mCollider.center = mCenterPosition;
 }
