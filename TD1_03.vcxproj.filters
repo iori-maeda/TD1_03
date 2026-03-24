@@ -23,10 +23,7 @@
     <ClCompile Include="Vector2.cpp">
       <Filter>KamataEngine</Filter>
     </ClCompile>
-    <ClCompile Include="ColliderCollection.cpp">
-      <Filter>KamataEngine</Filter>
-    </ClCompile>
-    <ClCompile Include="RendererUtility.cpp">
+    <ClCompile Include="Random.cpp">
       <Filter>KamataEngine</Filter>
     </ClCompile>
   </ItemGroup>
@@ -113,7 +110,6 @@
       <Filter>KamataEngine\Include</Filter>
     </ClInclude>
     <ClInclude Include="Vector2.h" />
-    <ClInclude Include="ColliderCollection.h" />
-    <ClInclude Include="RendererUtility.h" />
+    <ClInclude Include="Random.h" />
   </ItemGroup>
 </Project>
